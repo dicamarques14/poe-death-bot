@@ -5,12 +5,10 @@ import requests
 import json
 from random import randint
 
-token_key = '1321654156'
-channel_ID = "1231531"
 
 client = discord.Client()
-config = {}
-config['hello'] = 1
+
+config = {} 
 
 def getCharStatus(accountName):
     r = requests.post('https://www.pathofexile.com/character-window/get-characters', data = {'accountName':accountName})
@@ -32,52 +30,68 @@ def getDeathLine():
 async def my_background_task():
 
     global config
-    load_config()
     await asyncio.sleep(5)
     await client.wait_until_ready()
     counter = 0
-    channel = discord.Object(id=channel_ID) #channelID to show messages
+    channel = discord.Object(id=config['options']['channel_ID']) #channelID to show messages
+    await client.send_message(channel,"I'm Here!")
     while not client.is_closed:
-        #print('Time To check')
         if 'accounts' in config:
             for account in config['accounts']:
                 jsonAccount = getCharStatus(account['accountName'])
                 for jsonCharac in jsonAccount:
-                    #print(jsonCharac['league'])
-                    if jsonCharac['league'] == 'Hardcore Bestiary':
+                    #print(jsonCharac['league'] + '\n')
+                    if jsonCharac['league'] == config['options']['leagueName'] :
                         if jsonCharac['name'] not in account['aliveChars']:
-
-                            msgNew = 'Welcome to Wraeclast '+ jsonCharac['name'] + '. Good luck on your journey'
+                            msgNew = 'Welcome to Wraeclast '+ jsonCharac['name'] + '. Good luck on your journey. (' + account['accountName'] + ')'
                             print(msgNew)
                             await client.send_message(channel,msgNew)
                             account['aliveChars'].append(jsonCharac['name'])
-                            with open('config.json', 'w') as f:
-                                json.dump(config, f)
+                            write_config()
 
                     for configCharac in account['aliveChars']: 
                         if jsonCharac['name'] == configCharac:
-                            if jsonCharac['league'] != 'Hardcore Bestiary':
+                            #Auto add new char
+                            if jsonCharac['league'] != config['options']['leagueName']:
 
-                                msgDead = getDeathLine() + ' ' + jsonCharac['name'] + ' died at level ' + str(jsonCharac['level'])
+                                msgDead = getDeathLine() + ' ' + jsonCharac['name'] + ' died at level ' + str(jsonCharac['level']) + '. (' + account['accountName'] + ')' 
                                 await client.send_message(channel,msgDead)
                                 print(msgDead)
                                 account['aliveChars'].remove(jsonCharac['name'])
                                 #write it back to the file
-                                with open('config.json', 'w') as f:
-                                    json.dump(config, f)
+                                write_config()
+
             await asyncio.sleep(60) # task runs every 60 seconds
         else:
             print("no account")
 
 def load_config():
+    print("/*load_config")
     global config
     with open('config.json', 'r') as f:
          config = json.load(f)
+         print(config)
+    print("load_config*/")
+
+def write_config():
+    global config
+    with open('config.json', 'w') as f:
+        f.write(json.dumps(config,indent=4, separators=(',', ': ')))
 
 @client.event
 async def on_ready():
-    load_config()
+    #load_config()
+#    client.change_presence(game=Game(name="with humans"))
+    await client.change_presence(game=discord.Game(name=config['options']['leagueName']))
     print('Bot ON')
+
+'''
+@client.event
+async def wait_until_ready():
+    print('/*wait_until_ready')
+    load_config()
+    print('wait_until_ready*/')
+'''    
 
 @client.event
 async def on_message(message):
@@ -94,12 +108,16 @@ async def on_message(message):
                 "aliveChars" : []
             }
             config['accounts'].append(account)
-            with open('config.json', 'w') as f:
-                json.dump(config, f)
+            write_config()
         else:
             await client.send_message(message.author, 'Usage: ?add <accountname>')
+    
+    if message.content.startswith('?ping'):
+        channel = discord.Object(id=config['options']['channel_ID'])
+        await client.send_message(channel, 'Yeh, I am here')
 
-        
-
+#write_config()        
+load_config()
 client.loop.create_task(my_background_task())
-client.run(token_key)
+print('/*run*/')
+client.run(config['options']['token_key'])
