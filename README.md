@@ -4,7 +4,7 @@ Laugh at your friends death :D
 https://www.pathofexile.com/forum/view-thread/1212138/page/4
 
 
-#Commands:
+## Commands:
 
 Add account (account name, not character name!):
 ?add (name)
@@ -12,7 +12,7 @@ Add account (account name, not character name!):
 Check if the bot is alive
 ?ping 
 
-#config.json
+## config.json
 ```
 {
     "options": {
